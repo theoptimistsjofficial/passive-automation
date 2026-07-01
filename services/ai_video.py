@@ -12,7 +12,7 @@ import urllib.parse
 from pathlib import Path
 from typing import List, Optional
 
-from core.config import GEMINI_API_KEY, ROOT
+from core.config import FAL_API_KEY, FAL_MODEL, GEMINI_API_KEY, ROOT
 from core.logger import get_logger
 
 log = get_logger("ai_video")
@@ -236,6 +236,115 @@ class WanLocalProvider:
         raise ProviderError(f"Wan timed out after {self.timeout}s — increase timeout or use a lighter model")
 
 
+class FalAiProvider:
+    """Fal.ai hosted video generation (Kling 2.0 Master by default).
+
+    Fal.ai hosts most SOTA open + closed video models with pay-per-clip pricing.
+    Kling 2.0 Master gives near-SOTA quality at ~$0.40/5-sec clip.
+
+    Model options via FAL_MODEL env var:
+      - fal-ai/kling-video/v2/master/text-to-video     (~$0.40/clip, recommended)
+      - fal-ai/kling-video/v2-5/pro/text-to-video      (~$1.50/clip, SOTA)
+      - fal-ai/hailuo-02/standard/text-to-video        (~$0.30/clip)
+      - fal-ai/wan-t2v-14b                             (~$0.20/clip)
+      - fal-ai/veo3-fast                               (~$0.75/clip)
+      - fal-ai/ltx-video                               (~$0.02/clip, low quality)
+    """
+    def __init__(self, model: Optional[str] = None, api_key: Optional[str] = None,
+                 poll_seconds: int = 5, timeout_seconds: int = 600):
+        self.model = model or FAL_MODEL
+        self.api_key = api_key or FAL_API_KEY
+        self.base = "https://queue.fal.run"
+        self.poll = poll_seconds
+        self.timeout = timeout_seconds
+
+    def _headers(self) -> dict:
+        return {
+            "Authorization": f"Key {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+    def _submit(self, payload: dict) -> str:
+        url = f"{self.base}/{self.model}"
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=body, headers=self._headers(), method="POST")
+        try:
+            resp = json.loads(urllib.request.urlopen(req, timeout=30).read())
+        except urllib.error.HTTPError as e:
+            err = e.read().decode(errors="replace")[:400]
+            raise ProviderError(f"Fal.ai submit failed (HTTP {e.code}): {err}")
+        request_id = resp.get("request_id")
+        if not request_id:
+            raise ProviderError(f"Fal.ai response missing request_id: {resp}")
+        return request_id
+
+    def _poll(self, request_id: str) -> dict:
+        status_url = f"{self.base}/{self.model}/requests/{request_id}/status"
+        result_url = f"{self.base}/{self.model}/requests/{request_id}"
+        start = time.time()
+        while time.time() - start < self.timeout:
+            try:
+                r = urllib.request.Request(status_url, headers=self._headers())
+                status = json.loads(urllib.request.urlopen(r, timeout=15).read())
+            except Exception as e:
+                log.warning(f"Fal.ai status poll retry: {e}")
+                time.sleep(self.poll)
+                continue
+
+            state = status.get("status")
+            if state == "COMPLETED":
+                r = urllib.request.Request(result_url, headers=self._headers())
+                return json.loads(urllib.request.urlopen(r, timeout=30).read())
+            if state in ("FAILED", "ERROR"):
+                raise ProviderError(f"Fal.ai generation failed: {status}")
+            log.info(f"Fal.ai: {state} (elapsed {int(time.time()-start)}s)")
+            time.sleep(self.poll)
+        raise ProviderError(f"Fal.ai timed out after {self.timeout}s")
+
+    def generate(self, prompt: str, out_path: Path, duration_sec: float = 5.0,
+                 aspect: str = "16:9", negative_prompt: str = "") -> bool:
+        if not self.api_key:
+            raise ProviderError(
+                "FAL_API_KEY not set in .env — sign up at https://fal.ai and paste your key"
+            )
+
+        payload = {
+            "prompt": prompt,
+            "duration": str(int(duration_sec)) if "kling" in self.model else duration_sec,
+            "aspect_ratio": aspect,
+        }
+        if negative_prompt:
+            payload["negative_prompt"] = negative_prompt
+
+        log.info(f"Fal.ai [{self.model}] submitting prompt ({len(prompt)} chars)...")
+        request_id = self._submit(payload)
+        log.info(f"Fal.ai queued: {request_id}")
+
+        result = self._poll(request_id)
+
+        video_url = None
+        if isinstance(result.get("video"), dict):
+            video_url = result["video"].get("url")
+        elif isinstance(result.get("video_url"), str):
+            video_url = result["video_url"]
+        elif isinstance(result.get("output"), dict) and result["output"].get("video"):
+            video_url = result["output"]["video"].get("url")
+
+        if not video_url:
+            raise ProviderError(f"Fal.ai completed but no video URL in response: {result}")
+
+        log.info(f"Fal.ai downloading: {video_url[:80]}...")
+        try:
+            data = urllib.request.urlopen(video_url, timeout=120).read()
+        except Exception as e:
+            raise ProviderError(f"Fal.ai download failed: {e}")
+
+        out_path.write_bytes(data)
+        size_mb = len(data) / (1024 * 1024)
+        log.info(f"Fal.ai output: {out_path.name} ({size_mb:.1f}MB)")
+        return True
+
+
 class VeoProvider:
     """Google Veo 3.1 via google-genai SDK. Requires Gemini API key on Tier 1 (billing enabled).
     Free tier keys will 403 on video generation.
@@ -289,6 +398,7 @@ class VeoProvider:
 
 PROVIDER_CLASSES = {
     "manual_dropbox": ManualDropboxProvider,
+    "fal_ai": FalAiProvider,
     "wan_local": WanLocalProvider,
     "veo": VeoProvider,
 }

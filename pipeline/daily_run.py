@@ -14,12 +14,14 @@ from services.tts import synthesize
 from services.stock import fetch_scene
 from services.renderer import build_video
 from services.ai_video import generate_scene
+from services.music import fetch_bgm
 from agents.scene_director import choose_hero_indices, enhance_prompt_for_ai
 
 log = get_logger("pipeline")
 
 
-def run(niche_key: str | None = None, mark_done: bool = False) -> RenderedVideo:
+def run(niche_key: str | None = None, mark_done: bool = False,
+        upload: bool = False, privacy: str = "unlisted") -> RenderedVideo:
     niche = load_niche(niche_key)
     log.info(f"=== Pipeline start | channel={CHANNEL_NAME} | niche={niche['_key']} ===")
 
@@ -72,7 +74,12 @@ def run(niche_key: str | None = None, mark_done: bool = False) -> RenderedVideo:
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_mp4 = ROOT / "io_data" / "output" / f"{topic['id']}_{stamp}.mp4"
 
-    mp4_path, duration = build_video(script.slides, bg_paths, audio_paths, niche, out_mp4, workdir)
+    bgm_path = fetch_bgm(niche["_key"], workdir / "bgm.mp3")
+
+    mp4_path, duration = build_video(
+        script.slides, bg_paths, audio_paths, niche, out_mp4, workdir,
+        bgm_path=bgm_path,
+    )
 
     meta_path = ROOT / "io_data" / "output" / f"{topic['id']}_{stamp}.json"
     with open(meta_path, "w", encoding="utf-8") as f:
@@ -85,6 +92,22 @@ def run(niche_key: str | None = None, mark_done: bool = False) -> RenderedVideo:
         }, f, indent=2, ensure_ascii=False)
     log.info(f"Metadata saved: {meta_path.name}")
 
+    video_id = None
+    if upload:
+        try:
+            from services.youtube import upload as youtube_upload
+            video_id = youtube_upload(
+                mp4_path,
+                title=seo.title,
+                description=seo.description + f"\n\n#Shorts" if duration < 60 else seo.description,
+                tags=seo.tags,
+                category_id="22" if niche["_key"] == "positive_thinking" else "24",
+                privacy=privacy,
+            )
+            log.info(f"Uploaded to YouTube: https://youtu.be/{video_id}")
+        except Exception as e:
+            log.error(f"YouTube upload failed (video saved locally): {type(e).__name__}: {e}")
+
     if mark_done:
         from agents.topic_picker import mark_complete
         mark_complete(niche, topic["id"])
@@ -95,4 +118,5 @@ def run(niche_key: str | None = None, mark_done: bool = False) -> RenderedVideo:
         mp4_path=str(mp4_path),
         duration_seconds=duration,
         seo=seo,
+        youtube_video_id=video_id,
     )

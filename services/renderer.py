@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from PIL import Image, ImageDraw, ImageFont
 from moviepy import (
@@ -200,6 +200,7 @@ def build_video(
     niche: dict,
     out_mp4: Path,
     workdir: Path,
+    bgm_path: Optional[Path] = None,
 ) -> Tuple[Path, float]:
     workdir.mkdir(parents=True, exist_ok=True)
 
@@ -213,6 +214,24 @@ def build_video(
 
     final = concatenate_videoclips(slide_clips, method="compose", padding=-0.6)
     total_duration = final.duration
+
+    if bgm_path and bgm_path.exists():
+        try:
+            from moviepy import CompositeAudioClip, afx
+            narration = final.audio
+            bgm = AudioFileClip(str(bgm_path))
+            # Loop BGM to cover video length, apply low volume
+            if bgm.duration < total_duration:
+                loops = int(total_duration / bgm.duration) + 1
+                bgm = concatenate_videoclips([bgm] * loops, method="compose").subclipped(0, total_duration)
+            else:
+                bgm = bgm.subclipped(0, total_duration)
+            bgm = bgm.with_effects([afx.MultiplyVolume(0.12)]).with_effects([afx.AudioFadeOut(1.5)])
+            mixed = CompositeAudioClip([narration, bgm])
+            final = final.with_audio(mixed)
+            log.info(f"BGM mixed under narration (-18dB): {bgm_path.name}")
+        except Exception as e:
+            log.warning(f"BGM mix failed (continuing without): {type(e).__name__}: {e}")
 
     out_mp4.parent.mkdir(parents=True, exist_ok=True)
     final.write_videofile(

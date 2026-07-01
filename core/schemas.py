@@ -36,3 +36,4 @@ class RenderedVideo(BaseModel):
     thumbnail_path: Optional[str] = None
     duration_seconds: float
     seo: SEOPackage
+    youtube_video_id: Optional[str] = None

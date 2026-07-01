@@ -1,4 +1,6 @@
 .env
+config/youtube_client_secret.json
+config/youtube_token.json
 __pycache__/
 *.pyc
 .venv/
