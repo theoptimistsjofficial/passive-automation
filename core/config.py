@@ -4,7 +4,7 @@ import yaml
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
-load_dotenv(ROOT / ".env")
+load_dotenv(ROOT / ".env", override=True)
 
 
 def env(name: str, default: str = "") -> str:
