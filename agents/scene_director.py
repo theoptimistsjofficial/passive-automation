@@ -44,11 +44,33 @@ def choose_hero_indices(script: VideoScript, niche: dict) -> List[int]:
 
 
 def enhance_prompt_for_ai(slide_narration: str, slide_query: str, niche: dict) -> str:
-    """Craft a richer prompt for AI video from the slide's stock query + narration."""
-    style = niche.get("stock_query_style", "cinematic")
+    """Craft a Wan-optimized prompt from the slide's stock query + narration.
+
+    Wan 2.2 responds best to:
+    - Concrete visual subjects (not abstract concepts)
+    - Camera/lighting direction
+    - Style anchors that match the niche
+    - Motion cues ('slow zoom', 'gentle sway') — Wan tends to produce static clips otherwise
+    """
+    ai_cfg = niche.get("ai_video", {})
+    style = ai_cfg.get("wan_prompt_style",
+                       niche.get("stock_query_style", "cinematic, high production value"))
+
+    subject = slide_query.strip()
+    context_hint = slide_narration.strip()[:120]
+
     prompt = (
-        f"{slide_query}. Cinematic shot, {style}. "
-        f"Context: {slide_narration.strip()[:180]}. "
-        f"Slow subtle motion, no text, no logos, high production value, 24fps."
+        f"{subject}. {style}. "
+        f"Subject context: {context_hint}. "
+        "Cinematic composition, deliberate slow camera motion, professional colour grade. "
+        "No text overlays, no logos, no captions in frame."
     )
     return prompt
+
+
+def get_negative_prompt(niche: dict) -> str:
+    ai_cfg = niche.get("ai_video", {})
+    return ai_cfg.get(
+        "wan_negative_prompt",
+        "text, watermark, logo, low quality, blurry, distorted, static image, still photo",
+    )

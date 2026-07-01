@@ -1,153 +1,216 @@
-# Personal-laptop setup — Wan 2.2 local + optional Veo
+# Wan 2.2 setup for RTX 4060 8GB — precise sequence
 
-Your hardware: Lenovo Legion 5, i7-13650HX, 24GB RAM, **RTX 4060 8GB VRAM**.
+Total time: ~90 min (30 min download + 30 min ComfyUI setup + 30 min first-video verification).
 
-That fits the **Wan 2.2 5B** model with ComfyUI's built-in VRAM offloading.
-The 14B model needs 24GB+ VRAM — out of reach on the 4060, so we use 5B.
+Do these in **exact order** — deviations tend to bite.
 
 ---
 
-## Part 1 — Move this project to your personal laptop
+## Step 0 — pull latest code
 
-The project currently lives at `C:\DEV\PASSIVE AUTOMATION` on your office laptop.
-Move it to personal (recommended path): `D:\Projects\passive-automation`
-
-```powershell
-# On office laptop — push to GitHub (private repo)
-cd "C:\DEV\PASSIVE AUTOMATION"
-git init
-git add .
-git commit -m "initial pipeline: Level 2+3 renderer + AI video hooks"
-gh repo create passive-automation --private --source . --push
-```
-
-```powershell
-# On personal laptop — clone
-mkdir D:\Projects
-cd D:\Projects
-gh repo clone <your-user>/passive-automation
-cd passive-automation
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-copy .env.example .env
+```bash
+cd /c/JAI/passive-automation
+git pull origin main    # gets the load_dotenv(override=True) fix + test_wan.py + auto-detect
+source .venv/Scripts/activate
 ```
 
 ---
 
-## Part 2 — Install ComfyUI (Windows portable)
+## Step 1 — download ComfyUI portable
 
-1. Download the **ComfyUI Windows portable** release from
-   <https://github.com/comfyanonymous/ComfyUI/releases> — look for `ComfyUI_windows_portable_nvidia.7z` (recent).
-2. Extract to `D:\ComfyUI` (or wherever — must be on a drive with 30GB+ free).
-3. Verify it runs: double-click `run_nvidia_gpu.bat`. It should open your browser at `http://127.0.0.1:8188`.
-4. Stop it (`Ctrl+C` in the console) — we'll configure models first.
-
----
-
-## Part 3 — Download Wan 2.2 5B model files
-
-ComfyUI's model directory is `D:\ComfyUI\ComfyUI\models\`.
-
-You need three model files (all from HuggingFace, free):
-
-| File | Save to | Size | Link |
-|------|---------|------|------|
-| Wan 2.2 5B T2V diffusion | `models\diffusion_models\` | ~10GB | [Wan-AI/Wan2.2-T2V-A14B on HF](https://huggingface.co/Wan-AI) — pick the 5B variant |
-| Wan text encoder (umt5) | `models\text_encoders\` | ~5GB | on same repo |
-| Wan VAE | `models\vae\` | ~500MB | on same repo |
-
-> **Note:** file names shift between releases. Use ComfyUI-Manager to auto-download if manual is confusing:
-> Install ComfyUI-Manager from <https://github.com/ltdrdata/ComfyUI-Manager>, restart ComfyUI, click "Manager" → "Install Models" → search "wan 2.2 5b".
-
----
-
-## Part 4 — Get a Wan 2.2 workflow
-
-1. Open ComfyUI (`run_nvidia_gpu.bat`) → browser opens at 127.0.0.1:8188.
-2. In the top menu: **Workflow → Browse Templates → Video → Wan 2.2 5B** (or use `Workflow → Open` and drop in a `.json` from the community).
-3. Verify the workflow: click **Queue Prompt** with a test prompt like `"a peaceful mountain sunrise, cinematic"`.
-4. Wait ~3–7 minutes. You should get a 5-second MP4 in `D:\ComfyUI\ComfyUI\output\`.
-
-If that works, you're done with the ComfyUI side.
-
----
-
-## Part 5 — Save the workflow as API format
-
-1. In ComfyUI web UI: **top menu → Save (API Format)**. NOT the regular Save.
-2. Save the file as `wan22_5b.json` into your project: `D:\Projects\passive-automation\config\workflows\wan22_5b.json`.
-3. Open the JSON — find the **positive text prompt node**. It's usually a `CLIPTextEncode` node with an `inputs.text` field.
-4. Note its **node ID** (the numeric key in the JSON, e.g. `"6"` or `"39"`).
-5. Update `services/ai_video.py` if the node ID isn't `"6"`:
-   ```python
-   prompt_node_id: str = "6",   # ← change to your positive-prompt node ID
+1. Open <https://github.com/comfyanonymous/ComfyUI/releases/latest> in a browser.
+2. Download the latest release asset named **`ComfyUI_windows_portable_nvidia.7z`** (~1.5 GB). NOT the CPU or intel version.
+3. Extract with 7-Zip to `D:\ComfyUI\` (or wherever you have 30 GB free).
+4. Expected structure after extract:
+   ```
+   D:\ComfyUI\
+   ├── ComfyUI\              ← the app
+   │   └── models\           ← models go here
+   ├── python_embeded\       ← bundled Python
+   ├── update\
+   ├── run_nvidia_gpu.bat    ← launcher
+   └── run_cpu.bat
    ```
 
+Double-click `run_nvidia_gpu.bat` once to sanity check — a console opens, then a browser tab opens at `http://127.0.0.1:8188`. If it does, hit `Ctrl+C` in the console to stop it. If it doesn't, your NVIDIA driver isn't recent enough — update via GeForce Experience first.
+
 ---
 
-## Part 6 — Enable AI video in the pipeline
+## Step 2 — install ComfyUI-Manager (makes everything else easier)
+
+1. Open a **new** terminal.
+2. Clone the manager into ComfyUI's custom_nodes folder:
+
+   ```bash
+   cd /d/ComfyUI/ComfyUI/custom_nodes
+   git clone https://github.com/ltdrdata/ComfyUI-Manager.git
+   ```
+
+3. Restart ComfyUI (`run_nvidia_gpu.bat`). You should now see a **"Manager"** button in the browser UI's top right.
+
+---
+
+## Step 3 — download Wan 2.2 5B model files (~15 GB total)
+
+Two options — pick one.
+
+### Option A — via ComfyUI-Manager (easier, no CLI)
+
+1. In ComfyUI browser UI: **Manager → Model Manager → search "wan 2.2 5b"**.
+2. Install:
+   - `wan2.2_ti2v_5B_fp16.safetensors` (diffusion model, ~10 GB)
+   - `umt5_xxl_fp8_e4m3fn_scaled.safetensors` (text encoder, ~5 GB)
+   - `wan2.2_vae.safetensors` (VAE, ~500 MB)
+3. Restart ComfyUI when downloads complete.
+
+### Option B — direct HuggingFace download
+
+Manually download from `Comfy-Org/Wan_2.2_ComfyUI_Repackaged` on HuggingFace and place:
+
+| File | Save to |
+|------|---------|
+| `wan2.2_ti2v_5B_fp16.safetensors` | `D:\ComfyUI\ComfyUI\models\diffusion_models\` |
+| `umt5_xxl_fp8_e4m3fn_scaled.safetensors` | `D:\ComfyUI\ComfyUI\models\text_encoders\` |
+| `wan2.2_vae.safetensors` | `D:\ComfyUI\ComfyUI\models\vae\` |
+
+Or use `huggingface-cli`:
+```bash
+pip install "huggingface_hub[cli]"
+cd /d/ComfyUI/ComfyUI/models
+huggingface-cli download Comfy-Org/Wan_2.2_ComfyUI_Repackaged \
+  split_files/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors \
+  split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors \
+  split_files/vae/wan2.2_vae.safetensors \
+  --local-dir .
+# Then move each file from split_files/ into the matching subfolder above.
+```
+
+---
+
+## Step 4 — open the built-in Wan 2.2 workflow
+
+1. Start ComfyUI: `run_nvidia_gpu.bat` → browser opens at 127.0.0.1:8188.
+2. Top menu: **Workflow → Browse Templates → Video → Wan 2.2 5B TI2V**
+   (menu names sometimes shift — look for anything with "Wan 2.2" and "5B" in the name).
+3. The workflow appears on the canvas. Verify these node classes exist:
+   - `UNETLoader` — loads the 5B model
+   - `CLIPLoader` — loads umt5
+   - `VAELoader` — loads the vae
+   - `CLIPTextEncode` (×2 — positive and negative prompts)
+   - `KSampler` or similar
+   - `SaveAnimatedWEBP` or `VHS_VideoCombine`
+4. **Manual smoke test:** in the positive prompt node, type `"a peaceful mountain sunrise, cinematic"` and click **Queue Prompt**.
+5. First run downloads model shards (~30 sec extra). Then generation. On RTX 4060 8GB expect **3–7 minutes** for a 5-second clip.
+6. When it completes, you'll get an MP4 or WEBP in `D:\ComfyUI\ComfyUI\output\`. Open it — should be a moving cinematic mountain sunrise.
+
+If this manual test works, ComfyUI + Wan is fully set up. Continue to step 5.
+
+### Troubleshooting step 4
+
+| Symptom | Fix |
+|---------|-----|
+| Red error: "Missing model" | Model files not in the right folder — recheck step 3 paths |
+| Red error: "Missing custom nodes" | Manager → "Install Missing Custom Nodes" → restart |
+| CUDA OOM during generation | Edit `run_nvidia_gpu.bat`, add `--lowvram` to the launch args. Try again. |
+| Still OOM with `--lowvram` | Reduce workflow's `EmptyLatentImage` frame count from 121 → 81 (5s → 3.3s clip) |
+| Generation is very slow (>15 min) | Normal for 4060 8GB on FP16. Consider the community FP8 quantised variant of the 5B model |
+
+---
+
+## Step 5 — export the workflow as API JSON
+
+1. In ComfyUI, with the working Wan workflow loaded:
+2. Top menu: **Workflow → Export (API)** — this saves the workflow in the format our pipeline needs. (NOT the regular Save, which uses a different schema.)
+3. Save location: **`C:\JAI\passive-automation\config\workflows\wan22_5b.json`**
+4. Our code auto-detects the positive prompt node — no manual node ID configuration needed.
+
+---
+
+## Step 6 — smoke test from our pipeline
+
+```bash
+cd /c/JAI/passive-automation
+source .venv/Scripts/activate
+python test_wan.py
+```
+
+This runs a standalone 5-second AI clip generation via our code. Expected output:
+
+```
+[1/3] Checking ComfyUI health...
+  ✓ ComfyUI is up: {"system": {"os": "nt", ...
+[2/3] Loading workflow...
+  ✓ Workflow loaded from config/workflows/wan22_5b.json
+    Nodes: 12 — first few: ['3', '6', '7', '8', ...]
+[3/3] Generating (this takes 3–7 min on RTX 4060 8GB)...
+  [ai_video] Wan: using prompt node '6' (autodetected)
+  [ai_video] Wan queued: prompt_id=abc123
+  [ai_video] Wan: in-queue (10s)
+  [ai_video] Wan: in-queue (20s)
+  ...
+  [ai_video] Wan output (videos): wan_test_20260701_150000.mp4 (2340KB)
+
+✅ SUCCESS: C:\JAI\passive-automation\io_data\output\wan_test_20260701_150000.mp4
+```
+
+Open the file — should be a cinematic 5s clip matching the default prompt (silhouetted figure walking mountain sunrise). Iterate on prompts with:
+
+```bash
+python test_wan.py "Lord Murugan riding his peacock through cosmic clouds, sacred devotional art, warm temple lighting"
+```
+
+If `test_wan.py` works, the AI plumbing is fully verified.
+
+---
+
+## Step 7 — enable AI video in the full pipeline
 
 Edit `config/niches.yaml`:
 
 ```yaml
 positive_thinking:
-  # ...
   ai_video:
-    enabled: true              # ← flip this
-    providers: ["wan_local"]   # veo is optional; drop it if no billing account
+    enabled: true          # ← flip this
+    providers: ["wan_local"]
     hero_slides: ["hook", "middle"]
 ```
 
-Start ComfyUI (`run_nvidia_gpu.bat`) — leave the console open.
+Then run the full pipeline (keep ComfyUI running in the other terminal):
 
-Then in another terminal:
-```powershell
-cd D:\Projects\passive-automation
-.venv\Scripts\activate
-python run.py
-```
-
-The pipeline will:
-- Generate the hook + middle slides via Wan (~3–7 min each on your 4060)
-- Fetch stock video for the rest via Pexels
-- Assemble the final MP4
-
-Expected total build time per video: **20–30 min** (2 AI clips × 5 min + assembly).
-
----
-
-## Part 7 — Optional: also enable Veo 3.1 API
-
-**Only if you're willing to add a card to Google Cloud** (needed for API tier).
-
-1. Get key at <https://aistudio.google.com/apikey>
-2. Enable billing at <https://console.cloud.google.com/billing>
-3. Add key to `.env`: `GEMINI_API_KEY=xxxxx`
-4. Update config: `providers: ["wan_local", "veo"]` — Veo becomes fallback when ComfyUI is offline.
-
-Veo Fast: **~$0.15 per 8-second clip** past free trial credit.
-Veo Standard: **~$0.40–0.75 per 8-second clip**.
-
----
-
-## Troubleshooting on RTX 4060 8GB
-
-| Problem | Fix |
-|---------|-----|
-| **CUDA out of memory** | In ComfyUI's launch args, add `--lowvram` or `--novram`. Also reduce workflow's resolution to 480p or frame count to 81. |
-| **Very slow (>10 min per clip)** | Normal for 4060 8GB on 5B. Try FP8 quantized version of the model. |
-| **ComfyUI can't find model** | Verify path matches ComfyUI's config — `models\diffusion_models\<file>.safetensors` |
-| **Workflow errors "node not found"** | Install ComfyUI-Manager, then "Install Missing Custom Nodes" |
-| **HTTP 404 from pipeline** | Confirm `run_nvidia_gpu.bat` is running and browser can reach 127.0.0.1:8188 |
-
----
-
-## When you're done
-
-Test with:
-```powershell
+```bash
 python run.py positive_thinking
 ```
 
-The console will show `AI video (hero) — providers=['wan_local']` for slides 1 and 4 (middle of 7), and `Pexels video` for the rest. Total: ~20 min. Output MP4 in `io_data\output\`.
+You'll see:
+- Slides 1 and 4 → `AI video (hero) — providers=['wan_local']` → Wan generation (~5 min each)
+- Slides 2, 3, 5, 6, 7 → `Pexels video: ...` → stock footage
+- Final MoviePy assembly → ~2 min
+
+Expected total build time on 4060 8GB: **~15–20 min**.
+
+Final output: `io_data/output/pt-001_<timestamp>.mp4` — hero slides now show AI-generated cinematic clips instead of stock footage.
+
+---
+
+## Troubleshooting the pipeline integration
+
+Everything below runs in your Git Bash terminal, in the project directory:
+
+```bash
+# Verify Wan config picked up
+python -c "from core.config import load_niche; import json; n=load_niche('positive_thinking'); print(json.dumps(n.get('ai_video'), indent=2))"
+
+# Test just the provider health without generating
+python -c "from services.ai_video import WanLocalProvider; p=WanLocalProvider(); ok,info=p._health(); print('OK:',ok,'|',info[:200])"
+
+# Inspect the workflow after export — see the auto-detected prompt node
+python -c "
+import json
+from services.ai_video import _autodetect_positive_prompt_node
+wf = json.loads(open('config/workflows/wan22_5b.json').read())
+print('Positive prompt node:', _autodetect_positive_prompt_node(wf))
+print('Its inputs:', wf[_autodetect_positive_prompt_node(wf)].get('inputs'))
+"
+```
+
+If any of these fail, paste the output — the error message is intentionally verbose so we can pinpoint the fix.

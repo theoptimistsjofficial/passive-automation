@@ -21,13 +21,41 @@ class ProviderError(Exception):
     pass
 
 
+def _autodetect_positive_prompt_node(workflow: dict) -> str:
+    """Find the positive CLIPTextEncode node in a ComfyUI workflow.
+
+    Heuristic: first CLIPTextEncode node whose title/inputs.text looks positive
+    (i.e. NOT the negative prompt). If two exist, prefers the one linked to
+    a sampler's 'positive' input.
+    """
+    text_nodes = {
+        nid: n for nid, n in workflow.items()
+        if isinstance(n, dict) and n.get("class_type", "").endswith("CLIPTextEncode")
+    }
+    if not text_nodes:
+        raise ProviderError("No CLIPTextEncode node found in workflow — is this a Wan/SD text-to-video workflow?")
+
+    if len(text_nodes) == 1:
+        return next(iter(text_nodes))
+
+    for nid, node in text_nodes.items():
+        title = str(node.get("_meta", {}).get("title", "")).lower()
+        text = str(node.get("inputs", {}).get("text", "")).lower()
+        if "negative" in title or "negative" in text:
+            continue
+        if "positive" in title or (title == "" and text and "worst" not in text and "low quality" not in text):
+            return nid
+
+    return next(iter(text_nodes))
+
+
 class WanLocalProvider:
     """Talks to ComfyUI running locally (default localhost:8188).
-    User provides a Wan 2.2 workflow JSON exported from ComfyUI (Save API Format).
+    Auto-detects the positive prompt node in any workflow JSON.
     """
     def __init__(self, host: str = "127.0.0.1", port: int = 8188,
                  workflow_path: str = "config/workflows/wan22_5b.json",
-                 prompt_node_id: str = "6",
+                 prompt_node_id: Optional[str] = None,
                  poll_seconds: int = 10, timeout_seconds: int = 900):
         self.base = f"http://{host}:{port}"
         self.workflow_path = ROOT / workflow_path
@@ -39,57 +67,101 @@ class WanLocalProvider:
     def _load_workflow(self) -> dict:
         if not self.workflow_path.exists():
             raise ProviderError(
-                f"Wan workflow not found: {self.workflow_path}. "
-                "See docs/setup_personal_laptop.md — export from ComfyUI as API JSON."
+                f"Wan workflow not found: {self.workflow_path}\n"
+                "Fix: In ComfyUI web UI, Workflow → Browse Templates → Video → 'Wan 2.2 5B'.\n"
+                "     Then Workflow → Export (API) → save to that path."
             )
-        return json.loads(self.workflow_path.read_text())
-
-    def _health(self) -> bool:
         try:
-            urllib.request.urlopen(f"{self.base}/system_stats", timeout=3)
-            return True
-        except Exception:
-            return False
+            return json.loads(self.workflow_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            raise ProviderError(
+                f"Workflow JSON is malformed at {self.workflow_path}: {e}\n"
+                "Fix: re-export from ComfyUI using 'Save (API Format)' — not the regular Save."
+            )
+
+    def _health(self) -> tuple[bool, str]:
+        try:
+            r = urllib.request.urlopen(f"{self.base}/system_stats", timeout=3)
+            return True, r.read()[:120].decode(errors="replace")
+        except urllib.error.URLError as e:
+            return False, f"{type(e).__name__}: {e}"
+        except Exception as e:
+            return False, f"{type(e).__name__}: {e}"
 
     def generate(self, prompt: str, out_path: Path, duration_sec: float = 5.0,
                  aspect: str = "16:9") -> bool:
-        if not self._health():
-            raise ProviderError(f"ComfyUI not reachable at {self.base}. Start it first.")
+        ok, info = self._health()
+        if not ok:
+            raise ProviderError(
+                f"ComfyUI not reachable at {self.base}. Start `run_nvidia_gpu.bat` first.\n"
+                f"Error: {info}"
+            )
 
         wf = self._load_workflow()
-        if self.prompt_node_id in wf and "inputs" in wf[self.prompt_node_id]:
-            wf[self.prompt_node_id]["inputs"]["text"] = prompt
-        else:
-            raise ProviderError(f"prompt_node_id '{self.prompt_node_id}' not found in workflow")
+        node_id = self.prompt_node_id or _autodetect_positive_prompt_node(wf)
+        log.info(f"Wan: using prompt node '{node_id}' (autodetected)" if self.prompt_node_id is None
+                 else f"Wan: using prompt node '{node_id}' (configured)")
+
+        if node_id not in wf:
+            raise ProviderError(f"Prompt node '{node_id}' not in workflow. Nodes: {list(wf.keys())[:10]}...")
+
+        wf[node_id].setdefault("inputs", {})["text"] = prompt
 
         body = json.dumps({"prompt": wf, "client_id": self.client_id}).encode("utf-8")
-        req = urllib.request.Request(f"{self.base}/prompt", data=body,
-                                     headers={"Content-Type": "application/json"})
-        resp = json.loads(urllib.request.urlopen(req, timeout=30).read())
-        prompt_id = resp["prompt_id"]
-        log.info(f"Wan queued: prompt_id={prompt_id}")
+        req = urllib.request.Request(
+            f"{self.base}/prompt", data=body,
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            resp = json.loads(urllib.request.urlopen(req, timeout=30).read())
+        except urllib.error.HTTPError as e:
+            body = e.read().decode(errors="replace")[:400]
+            raise ProviderError(
+                f"ComfyUI rejected workflow (HTTP {e.code}): {body}\n"
+                "Common causes: missing model file, missing custom node, wrong workflow format."
+            )
+
+        prompt_id = resp.get("prompt_id")
+        if not prompt_id:
+            raise ProviderError(f"ComfyUI response missing prompt_id: {resp}")
+        log.info(f"Wan queued: prompt_id={prompt_id} — polling every {self.poll}s (timeout {self.timeout}s)")
 
         start = time.time()
+        last_status = ""
         while time.time() - start < self.timeout:
             time.sleep(self.poll)
-            hist = urllib.request.urlopen(f"{self.base}/history/{prompt_id}", timeout=10)
-            hist_data = json.loads(hist.read())
-            if prompt_id in hist_data:
-                outputs = hist_data[prompt_id].get("outputs", {})
-                for node_id, node_out in outputs.items():
-                    for file_info in node_out.get("gifs", []) + node_out.get("videos", []):
+            try:
+                hist = urllib.request.urlopen(f"{self.base}/history/{prompt_id}", timeout=10)
+                hist_data = json.loads(hist.read())
+            except Exception as e:
+                log.warning(f"Wan history poll error (retrying): {e}")
+                continue
+
+            if prompt_id not in hist_data:
+                elapsed = int(time.time() - start)
+                status = f"in-queue ({elapsed}s)"
+                if status != last_status:
+                    log.info(f"Wan: {status}")
+                    last_status = status
+                continue
+
+            outputs = hist_data[prompt_id].get("outputs", {})
+            for node_id_out, node_out in outputs.items():
+                for kind in ("videos", "gifs", "images"):
+                    for file_info in node_out.get(kind, []):
                         params = urllib.parse.urlencode({
                             "filename": file_info["filename"],
                             "subfolder": file_info.get("subfolder", ""),
                             "type": file_info.get("type", "output"),
                         })
-                        data = urllib.request.urlopen(f"{self.base}/view?{params}", timeout=60).read()
+                        data = urllib.request.urlopen(f"{self.base}/view?{params}", timeout=120).read()
                         out_path.write_bytes(data)
-                        log.info(f"Wan output: {out_path.name} ({len(data)//1024}KB)")
+                        log.info(f"Wan output ({kind}): {out_path.name} ({len(data)//1024}KB)")
                         return True
-                log.warning(f"Wan history exists but no video output found for {prompt_id}")
-                return False
-        raise ProviderError(f"Wan generation timed out after {self.timeout}s")
+            log.warning(f"Wan finished but no video/gif output in history for {prompt_id}: {list(outputs.keys())}")
+            return False
+
+        raise ProviderError(f"Wan timed out after {self.timeout}s — increase timeout or use a lighter model")
 
 
 class VeoProvider:

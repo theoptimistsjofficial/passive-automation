@@ -17,6 +17,8 @@ niches:
       enabled: false
       providers: ["wan_local", "veo"]
       hero_slides: ["hook", "middle"]
+      wan_prompt_style: "cinematic uplifting, warm golden hour lighting, slow subtle camera movement, hopeful atmosphere, high production value, 24fps film aesthetic"
+      wan_negative_prompt: "text, watermark, logo, low quality, blurry, distorted faces, extra limbs, static image, still photo"
     banned_topics:
       - suicide methods
       - self-harm instructions
@@ -42,6 +44,8 @@ niches:
       enabled: false
       providers: ["wan_local", "veo"]
       hero_slides: ["hook", "middle", "cta"]
+      wan_prompt_style: "sacred devotional art style, warm temple lighting, ornate hindu iconography, ethereal atmosphere, slow reverent camera movement, painterly aesthetic, no recurring characters needed"
+      wan_negative_prompt: "text, watermark, logo, low quality, blurry, distorted faces, modern clothing, non-devotional imagery, static image"
     banned_topics:
       - sectarian conflict
       - unverified theological claims
