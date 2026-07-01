@@ -10,6 +10,9 @@ from core.config import (
     ELEVENLABS_API_KEY,
     ELEVENLABS_VOICE_ID,
     ELEVENLABS_MODEL,
+    GOOGLE_TTS_API_KEY,
+    GOOGLE_TTS_VOICE,
+    GOOGLE_TTS_LANG,
     FAL_API_KEY,
     FAL_MODEL,
     PIXABAY_API_KEY,
@@ -38,8 +41,11 @@ def main():
     show("FAL_API_KEY", FAL_API_KEY, required=True)
     show("FAL_MODEL", FAL_MODEL, secret=False)
 
-    print("\n[REQUIRED FOR HUMAN VOICE]")
-    show("ELEVENLABS_API_KEY", ELEVENLABS_API_KEY, required=True)
+    print("\n[REQUIRED FOR HUMAN VOICE — set at least one]")
+    show("GOOGLE_TTS_API_KEY", GOOGLE_TTS_API_KEY)
+    show("GOOGLE_TTS_VOICE", GOOGLE_TTS_VOICE, secret=False)
+    show("GOOGLE_TTS_LANG", GOOGLE_TTS_LANG, secret=False)
+    show("ELEVENLABS_API_KEY", ELEVENLABS_API_KEY)
     show("ELEVENLABS_VOICE_ID", ELEVENLABS_VOICE_ID, secret=False)
     show("ELEVENLABS_MODEL", ELEVENLABS_MODEL, secret=False)
 
@@ -60,12 +66,12 @@ def main():
     missing = []
     if not FAL_API_KEY:
         missing.append("FAL_API_KEY")
-    if not ELEVENLABS_API_KEY:
-        missing.append("ELEVENLABS_API_KEY")
     if not GEMINI_API_KEY:
         missing.append("GEMINI_API_KEY")
     if not PEXELS_API_KEY:
         missing.append("PEXELS_API_KEY")
+    if not GOOGLE_TTS_API_KEY and not ELEVENLABS_API_KEY:
+        missing.append("GOOGLE_TTS_API_KEY or ELEVENLABS_API_KEY")
 
     if missing:
         print(f"WARNING: Missing {len(missing)} required key(s): {', '.join(missing)}")

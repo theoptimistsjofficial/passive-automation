@@ -13,6 +13,10 @@ io_data/heroshots/**/*.mp4
 io_data/heroshots/**/*.mov
 io_data/heroshots/**/*.webm
 io_data/heroshots/**/*.mkv
+io_data/bgm/**/*.mp3
+io_data/bgm/**/*.wav
+io_data/bgm/**/*.m4a
+io_data/bgm/**/*.ogg
 io_data/videos/*.yaml
 *.log
 .pytest_cache/

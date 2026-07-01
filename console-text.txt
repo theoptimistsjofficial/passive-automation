@@ -1,0 +1,26 @@
+jshan@Jai MINGW64 /c/JAI/passive-automation (main)
+$ python -c "from services.llm import generate_json; print(generate_json('Return valid JSON: {\"ok\": true, \"message\": \"hello\"}'))"
+C:\JAI\passive-automation\services\llm.py:25: FutureWarning:
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  import google.generativeai as genai
+18:27:01 [INFO] llm: LLM response: 32 chars
+{'ok': True, 'message': 'hello'}
+(.venv)
+jshan@Jai MINGW64 /c/JAI/passive-automation (main)
+$ python -c "from services.tts import synthesize; from pathlib import Path; synthesize('Testing the voice pipeline', Path('io_data/output/tts_test.mp3'))"
+18:27:36 [WARNING] tts: ElevenLabs quota exhausted, falling back to gTTS: {"detail":{"type":"payment_required","code":"paid_plan_required","message":"Free users cannot use library voices via the API. Please upgrade your subscription to use this voice.","status":"payment_required","request_id":"6a8d0fde5c31096c93173b1e0e2fc671"}}
+18:27:36 [INFO] tts: Falling back to gTTS
+18:27:37 [INFO] tts: TTS (gTTS): tts_test.mp3 (26 chars)
+(.venv)
+jshan@Jai MINGW64 /c/JAI/passive-automation (main)
+$ python -c "from services.music import fetch_bgm; from pathlib import Path; fetch_bgm('positive_thinking', Path('io_data/output/bgm_test.mp3'))"
+18:28:14 [WARNING] music: Pixabay Music HTTP 403: b'[ERROR 403] Access denied.'
+(.venv)
+jshan@Jai MINGW64 /c/JAI/passive-automation (main)
+$ start io_data/output/bgm_test.mp3

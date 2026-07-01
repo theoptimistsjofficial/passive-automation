@@ -22,10 +22,18 @@ def generate_json(prompt: str, model: str = "gemini-2.5-flash") -> dict:
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY not set — running in offline fallback mode")
 
-    import google.generativeai as genai
-    genai.configure(api_key=GEMINI_API_KEY)
-    m = genai.GenerativeModel(model)
-    resp = m.generate_content(prompt, generation_config={"temperature": 0.7, "response_mime_type": "application/json"})
-    text = resp.text
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    resp = client.models.generate_content(
+        model=model,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.7,
+            response_mime_type="application/json",
+        ),
+    )
+    text = resp.text or ""
     log.info(f"LLM response: {len(text)} chars")
     return _extract_json(text)
