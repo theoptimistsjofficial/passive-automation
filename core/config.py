@@ -8,7 +8,9 @@ load_dotenv(ROOT / ".env", override=True)
 
 
 def env(name: str, default: str = "") -> str:
-    return os.getenv(name, default).strip()
+    """Read env var. Falls back to default if unset OR set to empty string."""
+    val = os.getenv(name, "").strip()
+    return val if val else default
 
 
 def load_niche(niche_key: str | None = None) -> dict:
