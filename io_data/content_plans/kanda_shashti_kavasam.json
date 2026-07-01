@@ -1,0 +1,24 @@
+{
+  "niche": "devotional",
+  "description": "Kanda Shashti Kavasam verse-by-verse meaning explainer. Composed by Devaraya Swamigal, 19th century Tamil devotional hymn to Lord Murugan.",
+  "topics": [
+    {
+      "id": "ksk-001",
+      "title": "Kanda Shashti Kavasam Verse 1 — Thuthiporkku Val Vinaipom",
+      "context": "Opening invocation: 'Thuthiporkku val vinaipom, thunbam pom nenjil pathiyum kavi.' Meaning: strong negative karma dissolves and sorrow departs for those who praise. Set the tone as promise-first, request-later.",
+      "status": "pending"
+    },
+    {
+      "id": "ksk-002",
+      "title": "Kanda Shashti Kavasam Verse 2 — Sulori Ayilvel",
+      "context": "Introduces the Vel — Murugan's divine spear. 'Sulori ayilvel sudarvel vezhi.' Discuss the symbolism of Vel as consciousness piercing ignorance. Ground in Tamil Shaiva tradition.",
+      "status": "pending"
+    },
+    {
+      "id": "ksk-003",
+      "title": "Kanda Shashti Kavasam Verse 3 — Pazhaninathan",
+      "context": "Invocation to Murugan as Pazhaninathan — Lord of Palani hill. Reference the story of the mango and the choice that made Murugan the Palani deity. Verifiable Puranic story.",
+      "status": "pending"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+io_data/output/*.mp4
+io_data/output/*.wav
+io_data/output/*.mp3
+io_data/output/temp/
+io_data/videos/*.yaml
+*.log
+.pytest_cache/
+_bar_*.png
+_text_*.png
+_vignette_tmp.png
+*TEMP_MPY*
+

@@ -1,0 +1,48 @@
+niches:
+  positive_thinking:
+    display_name: "Optimist Mantra — Real stories of resilience"
+    content_plan: io_data/content_plans/positive_thinking.json
+    voice_tone: "warm, inspirational, calm"
+    tts_lang: "en"
+    tts_slow: false
+    slides_per_video: 7
+    slide_duration_seconds: 8
+    background_color: "#0d1b2a"
+    accent_color: "#f4a261"
+    text_color: "#ffffff"
+    stock_query_style: "cinematic uplifting real people"
+    prefer_stock_video: true
+    transition_seconds: 0.6
+    ai_video:
+      enabled: false
+      providers: ["wan_local", "veo"]
+      hero_slides: ["hook", "middle"]
+    banned_topics:
+      - suicide methods
+      - self-harm instructions
+      - explicit trauma
+      - unverified claims
+      - defamation
+
+  devotional:
+    display_name: "Divine Lyrics — Sacred verse meanings"
+    content_plan: io_data/content_plans/kanda_shashti_kavasam.json
+    voice_tone: "reverent, clear, meditative"
+    tts_lang: "en"
+    tts_slow: false
+    slides_per_video: 8
+    slide_duration_seconds: 10
+    background_color: "#1a0f0a"
+    accent_color: "#d4a574"
+    text_color: "#fff8e7"
+    stock_query_style: "hindu temple murugan devotional serene"
+    prefer_stock_video: true
+    transition_seconds: 0.6
+    ai_video:
+      enabled: false
+      providers: ["wan_local", "veo"]
+      hero_slides: ["hook", "middle", "cta"]
+    banned_topics:
+      - sectarian conflict
+      - unverified theological claims
+      - disrespectful references

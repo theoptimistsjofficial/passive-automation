@@ -1,0 +1,36 @@
+{
+  "niche": "positive_thinking",
+  "description": "Real, verifiable stories of resilience and comeback from public figures.",
+  "topics": [
+    {
+      "id": "pt-001",
+      "title": "J.K. Rowling — 12 rejections before Harry Potter",
+      "context": "Single mother on welfare in Edinburgh, 1990-1997. Rejected by Bloomsbury 12 times before an 8-year-old daughter of the CEO championed the book. Focus on the specific mechanics of rejection and word-of-mouth breakthrough. Avoid unverified quotes.",
+      "status": "pending"
+    },
+    {
+      "id": "pt-002",
+      "title": "Colonel Sanders — 1,009 restaurant rejections before KFC",
+      "context": "Harland Sanders was 62, on a $105 monthly Social Security check, and driving state to state pitching his fried chicken recipe. Well-documented in his 1974 autobiography. Focus on the age factor and persistence framing.",
+      "status": "pending"
+    },
+    {
+      "id": "pt-003",
+      "title": "Vera Wang — Started fashion at 40",
+      "context": "Failed to make the 1968 US Olympic figure skating team, worked at Vogue for 17 years, was passed over for Editor-in-Chief. Launched her bridal empire at 40. Verifiable timeline; focus on late-start narrative.",
+      "status": "pending"
+    },
+    {
+      "id": "pt-004",
+      "title": "Steven Spielberg — Rejected from USC film school twice",
+      "context": "Rejected by USC's School of Cinematic Arts twice before landing at Cal State Long Beach. Won 3 Academy Awards. In 1994 USC gave him an honorary degree; in 1996 he joined the board of trustees. Well-documented.",
+      "status": "pending"
+    },
+    {
+      "id": "pt-005",
+      "title": "Oprah Winfrey — Fired from her first TV job",
+      "context": "Fired from Baltimore's WJZ-TV in 1977 as an evening news anchor, told she was 'unfit for television.' Moved to a morning talk show format, which became her breakthrough. Focus on the pivot, not the setback.",
+      "status": "pending"
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "topic": {
+    "id": "pt-001",
+    "title": "J.K. Rowling — 12 rejections before Harry Potter",
+    "context": "Single mother on welfare in Edinburgh, 1990-1997. Rejected by Bloomsbury 12 times before an 8-year-old daughter of the CEO championed the book. Focus on the specific mechanics of rejection and word-of-mouth breakthrough. Avoid unverified quotes.",
+    "status": "pending"
+  },
+  "script": {
+    "topic_id": "pt-001",
+    "title_working": "How She Turned Rejection Into a Global Movement",
+    "hook": "She was rejected 30 times before one yes changed everything.",
+    "slides": [
+      {
+        "index": 1,
+        "heading": "Thirty Doors Slammed Shut",
+        "body": "One dream. Thirty rejections. Zero backup plan.",
+        "narration": "Before J.K. Rowling became a household name, twelve publishers rejected the first Harry Potter book. She was a single mother on welfare, writing in cafes.",
+        "stock_query": "person writing cafe cinematic uplifting real people"
+      },
+      {
+        "index": 2,
+        "heading": "The Yes That Almost Wasn't",
+        "body": "A publisher's 8-year-old daughter said yes for him.",
+        "narration": "Bloomsbury only agreed to publish after the CEO's young daughter read the first chapter and demanded more.",
+        "stock_query": "child reading book cinematic uplifting real people"
+      },
+      {
+        "index": 3,
+        "heading": "One Small Advance",
+        "body": "£1,500. That was it.",
+        "narration": "Rowling was told to get a day job — children's books don't make money.",
+        "stock_query": "empty bookshelf cinematic uplifting real people"
+      },
+      {
+        "index": 4,
+        "heading": "The Turn",
+        "body": "Word of mouth changed the trajectory.",
+        "narration": "Kids passed the book to friends. Teachers read it aloud. Libraries couldn't keep it on shelves.",
+        "stock_query": "children reading library cinematic uplifting real people"
+      },
+      {
+        "index": 5,
+        "heading": "500 Million Copies Later",
+        "body": "The rejected manuscript became history.",
+        "narration": "Every rejection letter was, in hindsight, one publisher missing the biggest story of the decade.",
+        "stock_query": "stack of books cinematic uplifting real people"
+      },
+      {
+        "index": 6,
+        "heading": "What Rejection Really Means",
+        "body": "It's data, not verdict.",
+        "narration": "A no is not a judgment on your worth — it's information about that one door. Keep knocking.",
+        "stock_query": "sunrise mountain cinematic uplifting real people"
+      },
+      {
+        "index": 7,
+        "heading": "Your Thirty-First Yes",
+        "body": "It's already waiting.",
+        "narration": "The only way to guarantee no is to stop asking. Somewhere out there, your yes is waiting.",
+        "stock_query": "open door light cinematic uplifting real people"
+      }
+    ],
+    "cta": "If this reminded you why you started — hit subscribe. Tomorrow: another real story."
+  },
+  "seo": {
+    "title": "How She Turned Rejection Into a Global Movement",
+    "description": "She was rejected 30 times before one yes changed everything.\n\nIn this video you'll learn: Thirty Doors Slammed Shut | The Yes That Almost Wasn't | One Small Advance | The Turn | 500 Million Copies Later | What Rejection Really Means | Your Thirty-First Yes.\n\nIf this reminded you why you started — hit subscribe. Tomorrow: another real story.\n\n#OptimistMantra #Motivation #Inspiration",
+    "tags": [
+      "motivation",
+      "inspiration",
+      "real story",
+      "resilience",
+      "overcoming challenges",
+      "OptimistMantra",
+      "shorts",
+      "youtube shorts"
+    ],
+    "hashtags": [
+      "#OptimistMantra",
+      "#Motivation",
+      "#Shorts"
+    ]
+  },
+  "video_path": "C:\\DEV\\PASSIVE AUTOMATION\\io_data\\output\\pt-001_20260701_121705.mp4",
+  "duration_seconds": 53.66
+}
