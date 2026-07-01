@@ -56,7 +56,7 @@ class WanLocalProvider:
     def __init__(self, host: str = "127.0.0.1", port: int = 8188,
                  workflow_path: str = "config/workflows/wan22_5b.json",
                  prompt_node_id: Optional[str] = None,
-                 poll_seconds: int = 10, timeout_seconds: int = 900):
+                 poll_seconds: int = 10, timeout_seconds: int = 1800):
         self.base = f"http://{host}:{port}"
         self.workflow_path = ROOT / workflow_path
         self.prompt_node_id = prompt_node_id

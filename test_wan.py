@@ -57,7 +57,7 @@ def main():
         print(f"  ❌ {e}")
         sys.exit(3)
 
-    print("\n[3/3] Generating (this takes 3–7 min on RTX 4060 8GB)...")
+    print("\n[3/3] Generating (this takes 10–20 min on RTX 4060 8GB with tiled VAE)...")
     try:
         ok = provider.generate(prompt, out_path, duration_sec=5.0, aspect="16:9")
         if ok and out_path.exists():
