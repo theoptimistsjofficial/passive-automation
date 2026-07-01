@@ -57,7 +57,11 @@ def run(niche_key: str | None = None, mark_done: bool = False) -> RenderedVideo:
             ai_prompt = enhance_prompt_for_ai(slide.narration, slide.stock_query, niche)
             ai_out = bg_stem.with_suffix(".mp4")
             log.info(f"Slide {slide.index}: AI video (hero) — providers={ai_providers}")
-            bg_path = generate_scene(ai_prompt, ai_out, ai_providers, duration_sec=5.0, aspect="16:9")
+            bg_path = generate_scene(
+                ai_prompt, ai_out, ai_providers,
+                duration_sec=5.0, aspect="16:9",
+                niche_key=niche["_key"],
+            )
             if bg_path is None:
                 log.warning(f"Slide {slide.index}: all AI providers failed, falling back to stock")
 

@@ -7,6 +7,10 @@ io_data/output/*.mp4
 io_data/output/*.wav
 io_data/output/*.mp3
 io_data/output/temp/
+io_data/heroshots/**/*.mp4
+io_data/heroshots/**/*.mov
+io_data/heroshots/**/*.webm
+io_data/heroshots/**/*.mkv
 io_data/videos/*.yaml
 *.log
 .pytest_cache/

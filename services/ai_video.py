@@ -4,6 +4,7 @@ Providers implement generate(prompt, out_path, duration, aspect) -> bool.
 The dispatcher tries configured providers in order; first success wins.
 """
 import json
+import shutil
 import time
 import uuid
 import urllib.request
@@ -47,6 +48,77 @@ def _autodetect_positive_prompt_node(workflow: dict) -> str:
             return nid
 
     return next(iter(text_nodes))
+
+
+class ManualDropboxProvider:
+    """Uses pre-generated hero clips from cloud AI tools (Kling, Vidu, Hailuo, etc.).
+
+    Workflow:
+      1. Generate clips in the tool's web UI (free daily credits).
+      2. Download and rename to slide_{NN}.mp4 (e.g. slide_01.mp4, slide_04.mp4).
+      3. Drop them in io_data/heroshots/{niche_key}/.
+      4. Run the pipeline — this provider picks them up first, before Wan.
+
+    If a matching file doesn't exist, generate() returns False and the pipeline
+    falls through to the next provider (Wan, then Pexels stock).
+
+    Naming rules:
+      - File must match slide_{NN}.{ext} where NN is zero-padded slide index
+      - Extensions checked: .mp4, .mov, .webm
+      - Case-insensitive
+    """
+    VALID_EXTS = {".mp4", ".mov", ".webm", ".mkv"}
+
+    def __init__(self, base_dir: str = "io_data/heroshots", niche_key: Optional[str] = None):
+        self.base_dir = ROOT / base_dir
+        self.niche_key = niche_key
+
+    def _resolve_slide_num(self, out_path: Path) -> Optional[int]:
+        # out_path stem is like "bg_01" or "slide_01"; extract the number
+        stem = out_path.stem
+        parts = stem.rsplit("_", 1)
+        if len(parts) == 2 and parts[1].isdigit():
+            return int(parts[1])
+        return None
+
+    def generate(self, prompt: str, out_path: Path, duration_sec: float = 5.0,
+                 aspect: str = "16:9") -> bool:
+        if not self.niche_key:
+            log.info("ManualDropbox: no niche_key supplied — skipping")
+            return False
+
+        slide_num = self._resolve_slide_num(out_path)
+        if slide_num is None:
+            log.info(f"ManualDropbox: could not parse slide index from {out_path.name} — skipping")
+            return False
+
+        niche_folder = self.base_dir / self.niche_key
+        if not niche_folder.exists():
+            log.info(f"ManualDropbox: folder not found {niche_folder} — skipping (falls through to next provider)")
+            return False
+
+        target_stem = f"slide_{slide_num:02d}"
+        candidates = [
+            p for p in niche_folder.iterdir()
+            if p.is_file() and p.stem.lower() == target_stem and p.suffix.lower() in self.VALID_EXTS
+        ]
+
+        if not candidates:
+            log.info(
+                f"ManualDropbox: no pre-generated clip at {niche_folder}/{target_stem}.* — "
+                "falling through to next provider"
+            )
+            return False
+
+        src = candidates[0]
+        try:
+            shutil.copy2(src, out_path)
+        except Exception as e:
+            raise ProviderError(f"ManualDropbox: failed to copy {src} → {out_path}: {e}")
+
+        size_mb = out_path.stat().st_size / (1024 * 1024)
+        log.info(f"ManualDropbox: using pre-generated clip {src.name} ({size_mb:.1f}MB) for slide {slide_num}")
+        return True
 
 
 class WanLocalProvider:
@@ -216,21 +288,30 @@ class VeoProvider:
 
 
 PROVIDER_CLASSES = {
+    "manual_dropbox": ManualDropboxProvider,
     "wan_local": WanLocalProvider,
     "veo": VeoProvider,
 }
 
 
 def generate_scene(prompt: str, out_path: Path, providers: List[str],
-                   duration_sec: float = 5.0, aspect: str = "16:9") -> Optional[Path]:
-    """Try providers in order; return path on first success, None if all fail."""
+                   duration_sec: float = 5.0, aspect: str = "16:9",
+                   niche_key: Optional[str] = None) -> Optional[Path]:
+    """Try providers in order; return path on first success, None if all fail.
+
+    niche_key is used by ManualDropboxProvider to locate pre-generated clips
+    under io_data/heroshots/{niche_key}/. Other providers ignore it.
+    """
     for name in providers:
         cls = PROVIDER_CLASSES.get(name)
         if not cls:
             log.warning(f"Unknown provider: {name}")
             continue
         try:
-            provider = cls()
+            if name == "manual_dropbox":
+                provider = cls(niche_key=niche_key)
+            else:
+                provider = cls()
             if provider.generate(prompt, out_path, duration_sec, aspect):
                 return out_path
         except ProviderError as e:
