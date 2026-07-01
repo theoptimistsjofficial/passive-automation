@@ -14,7 +14,7 @@ niches:
     prefer_stock_video: true
     transition_seconds: 0.6
     ai_video:
-      enabled: false
+      enabled: true
       providers: ["wan_local", "veo"]
       hero_slides: ["hook", "middle"]
       wan_prompt_style: "cinematic uplifting, warm golden hour lighting, slow subtle camera movement, hopeful atmosphere, high production value, 24fps film aesthetic"
